@@ -683,7 +683,7 @@ async function sendToGoogleSheets() {
         };
         
         // URL do Google Apps Script Web App
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzLClFbFWOGGl1GWDokGRhdvyajvMT-0L2yKIduuR5rxvu3MPaZHB1UQcSXCbJcbFlo/exec';
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhUQTFr8jNk-Z0yuAw8e5dTOoZdvuni0MhQKuO_KdC4BH1-cGjp5E6xM2WXZdlsc7D/exec';
         
         // Converter dados para FormData (formato mais compatível com Google Apps Script)
         const formDataToSend = new FormData();
@@ -1021,7 +1021,7 @@ function generateReportData(results) {
 // Função para buscar dados do Google Sheets
 async function fetchDataFromGoogleSheets() {
     try {
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzLClFbFWOGGl1GWDokGRhdvyajvMT-0L2yKIduuR5rxvu3MPaZHB1UQcSXCbJcbFlo/exec';
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhUQTFr8jNk-Z0yuAw8e5dTOoZdvuni0MhQKuO_KdC4BH1-cGjp5E6xM2WXZdlsc7D/exec';
         
         // Tentar fetch direto primeiro
         try {
