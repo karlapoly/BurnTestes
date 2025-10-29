@@ -1275,8 +1275,16 @@ function showCompanyDataVisualization(companyData) {
     
     // Criar gráficos após inserir o HTML
     setTimeout(() => {
+        // Verificar se Chart.js está disponível
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js não está carregado!');
+            alert('Erro: Biblioteca de gráficos não carregada. Recarregue a página.');
+            return;
+        }
+        
+        console.log('Criando gráficos com dados:', { stats, companyData });
         createChartsForCompanies(stats, companyData);
-    }, 100);
+    }, 300);
 }
 
 // Função para calcular médias por categoria para uma empresa
@@ -1309,48 +1317,61 @@ function calculateCategoryAveragesForCompany(diagnostics) {
 
 // Função para criar os gráficos (MODIFICADA PARA USAR DADOS PASSADOS)
 function createChartsForCompanies(stats, companyData) {
+    // Verificar se Chart.js está disponível
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js não está disponível!');
+        return;
+    }
+    
     // Converter companyData em array plano para usar nas funções
     const allData = [];
     Object.values(companyData).forEach(companyDiagnostics => {
         allData.push(...companyDiagnostics);
     });
     
+    console.log('Dados para gráficos:', { stats, allData, companyData });
+    
     Object.entries(stats).forEach(([company, stat], index) => {
         const chartId = `chart-${company}-${index}`;
         const categoryChartId = `category-chart-${company}-${index}`;
         
+        console.log(`Criando gráficos para ${company}:`, { chartId, categoryChartId });
+        
         // Gráfico de pizza - Distribuição de risco
         const ctx = document.getElementById(chartId);
-        if (ctx) {
-            new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: ['Adequado', 'Alerta', 'Risco Alto'],
-                    datasets: [{
-                        data: [
-                            stat.riskDistribution.low,
-                            stat.riskDistribution.medium,
-                            stat.riskDistribution.high
-                        ],
-                        backgroundColor: [
-                            '#10B981',
-                            '#F6C44E',
-                            '#E25B5B'
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
+        if (!ctx) {
+            console.error(`Canvas não encontrado: ${chartId}`);
+        } else {
+            try {
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Adequado', 'Alerta', 'Risco Alto'],
+                        datasets: [{
+                            data: [
+                                stat.riskDistribution.low,
+                                stat.riskDistribution.medium,
+                                stat.riskDistribution.high
+                            ],
+                            backgroundColor: [
+                                '#10B981',
+                                '#F6C44E',
+                                '#E25B5B'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
                                     const label = context.label || '';
                                     const value = context.parsed || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -1362,75 +1383,88 @@ function createChartsForCompanies(stats, companyData) {
                     }
                 }
             });
+                console.log(`Gráfico de pizza criado: ${chartId}`);
+            } catch (error) {
+                console.error(`Erro ao criar gráfico de pizza ${chartId}:`, error);
+            }
         }
         
         // Gráfico de barras - Médias por categoria
         const categoryCtx = document.getElementById(categoryChartId);
-        if (categoryCtx) {
-            const companyDiagnostics = allData.filter(d => d.empresa === company);
-            const categoryAverages = calculateCategoryAveragesForCompany(companyDiagnostics);
-            
-            const categories = Object.keys(categoryAverages);
-            const averages = Object.values(categoryAverages);
-            
-            // Abreviar nomes das categorias para melhor visualização
-            const shortCategories = categories.map(cat => {
-                if (cat.includes('Organização')) return 'Org. e Carga';
-                if (cat.includes('Comunicação')) return 'Comunicação';
-                if (cat.includes('Reconhecimento')) return 'Reconhecimento';
-                if (cat.includes('Autonomia')) return 'Autonomia';
-                if (cat.includes('Saúde Mental')) return 'Saúde Mental';
-                return cat.substring(0, 15);
-            });
-            
-            new Chart(categoryCtx, {
-                type: 'bar',
-                data: {
-                    labels: shortCategories,
-                    datasets: [{
-                        label: 'Pontuação Média',
-                        data: averages,
-                        backgroundColor: averages.map(avg => {
-                            if (avg >= 4.0) return '#10B981';
-                            if (avg >= 3.0) return '#F6C44E';
-                            return '#E25B5B';
-                        }),
-                        borderColor: averages.map(avg => {
-                            if (avg >= 4.0) return '#059669';
-                            if (avg >= 3.0) return '#D97706';
-                            return '#DC2626';
-                        }),
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 5,
-                            ticks: {
-                                stepSize: 0.5
-                            }
-                        }
+        if (!categoryCtx) {
+            console.error(`Canvas não encontrado: ${categoryChartId}`);
+        } else {
+            try {
+                const companyDiagnostics = allData.filter(d => d.empresa === company);
+                const categoryAverages = calculateCategoryAveragesForCompany(companyDiagnostics);
+                
+                const categories = Object.keys(categoryAverages);
+                const averages = Object.values(categoryAverages);
+                
+                // Abreviar nomes das categorias para melhor visualização
+                const shortCategories = categories.map(cat => {
+                    if (cat.includes('Organização')) return 'Org. e Carga';
+                    if (cat.includes('Comunicação')) return 'Comunicação';
+                    if (cat.includes('Reconhecimento')) return 'Reconhecimento';
+                    if (cat.includes('Autonomia')) return 'Autonomia';
+                    if (cat.includes('Saúde Mental')) return 'Saúde Mental';
+                    return cat.substring(0, 15);
+                });
+                
+                new Chart(categoryCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: shortCategories,
+                        datasets: [{
+                            label: 'Pontuação Média',
+                            data: averages,
+                            backgroundColor: averages.map(avg => {
+                                if (avg >= 4.0) return '#10B981';
+                                if (avg >= 3.0) return '#F6C44E';
+                                return '#E25B5B';
+                            }),
+                            borderColor: averages.map(avg => {
+                                if (avg >= 4.0) return '#059669';
+                                if (avg >= 3.0) return '#D97706';
+                                return '#DC2626';
+                            }),
+                            borderWidth: 2
+                        }]
                     },
-                    plugins: {
-                        legend: {
-                            display: false
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 5,
+                                ticks: {
+                                    stepSize: 0.5
+                                }
+                            }
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `Média: ${context.parsed.y.toFixed(2)}/5.0`;
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Média: ${context.parsed.y.toFixed(2)}/5.0`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+                console.log(`Gráfico de barras criado: ${categoryChartId}`);
+            } catch (error) {
+                console.error(`Erro ao criar gráfico de barras ${categoryChartId}:`, error);
+            }
         }
     });
+    
+    console.log('Gráficos criados com sucesso!');
 }
 
 // Função para calcular estatísticas das empresas
