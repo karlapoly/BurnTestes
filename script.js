@@ -68,16 +68,24 @@ let currentSection = 'home';
 // Função para obter data/hora no fuso horário de Brasília
 function getBrasiliaDateTime() {
     const now = new Date();
-    // Converter para horário de Brasília (UTC-3)
-    const brasiliaOffset = -3 * 60; // -3 horas em minutos
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const brasiliaTime = new Date(utc + (brasiliaOffset * 60000));
-    return brasiliaTime;
+    // Criar data no fuso horário de Brasília
+    return new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
 }
 
 // Função para obter timestamp ISO no horário de Brasília
 function getBrasiliaISOString() {
-    return getBrasiliaDateTime().toISOString();
+    const brasiliaDate = getBrasiliaDateTime();
+    // Formatar como ISO string manualmente ajustando o offset
+    const year = brasiliaDate.getFullYear();
+    const month = String(brasiliaDate.getMonth() + 1).padStart(2, '0');
+    const day = String(brasiliaDate.getDate()).padStart(2, '0');
+    const hours = String(brasiliaDate.getHours()).padStart(2, '0');
+    const minutes = String(brasiliaDate.getMinutes()).padStart(2, '0');
+    const seconds = String(brasiliaDate.getSeconds()).padStart(2, '0');
+    const milliseconds = String(brasiliaDate.getMilliseconds()).padStart(3, '0');
+    
+    // Retornar no formato ISO com offset de Brasília (-03:00)
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}-03:00`;
 }
 
 // Função para obter data formatada no horário de Brasília
@@ -1022,101 +1030,46 @@ function generateReportData(results) {
 async function fetchDataFromGoogleSheets() {
     const scriptUrl = 'https://script.google.com/macros/s/AKfycbyzm9O88h4fFdll2dyuzIF4Ty_Rl-sl9wLkUXYLlrQrfpW7i5IK4uYcK6jjhvMberkT/exec';
     
-    console.log('🔄 Tentando buscar dados do Google Sheets...', scriptUrl);
-    
-    // Método 1: Tentar fetch direto primeiro
+    // Tentar fetch direto primeiro
     try {
-        console.log('📡 Tentativa 1: Fetch direto...');
         const response = await fetch(scriptUrl, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
+            mode: 'cors'
         });
-        
-        console.log('📥 Resposta recebida:', response.status, response.statusText);
         
         if (response.ok) {
             const text = await response.text();
-            console.log('📄 Resposta texto:', text.substring(0, 200));
+            const result = JSON.parse(text);
             
-            try {
-                const result = JSON.parse(text);
-                console.log('✅ Dados parseados com sucesso:', result);
-                
-                if (result.success && result.data) {
-                    console.log(`✅ Sucesso! ${result.data.length} registros encontrados`);
-                    return result.data;
-                } else {
-                    console.warn('⚠️ Resposta sem dados:', result);
-                }
-            } catch (parseError) {
-                console.error('❌ Erro ao fazer parse do JSON:', parseError);
-                console.log('Resposta completa:', text);
-            }
-        } else {
-            console.warn(`⚠️ Resposta não OK: ${response.status} ${response.statusText}`);
-        }
-    } catch (fetchError) {
-        console.log('❌ Erro no fetch direto (pode ser CORS):', fetchError.message);
-    }
-    
-    // Método 2: Tentar com proxy CORS
-    try {
-        console.log('📡 Tentativa 2: Usando proxy CORS (allorigins.win)...');
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scriptUrl)}`;
-        const proxyResponse = await fetch(proxyUrl);
-        
-        console.log('📥 Resposta do proxy:', proxyResponse.status, proxyResponse.statusText);
-        
-        if (proxyResponse.ok) {
-            const proxyData = await proxyResponse.json();
-            console.log('📄 Dados do proxy:', proxyData);
-            
-            if (proxyData.contents) {
-                try {
-                    const result = JSON.parse(proxyData.contents);
-                    console.log('✅ Dados parseados do proxy:', result);
-                    
-                    if (result.success && result.data) {
-                        console.log(`✅ Sucesso via proxy! ${result.data.length} registros encontrados`);
-                        return result.data;
-                    }
-                } catch (parseError) {
-                    console.error('❌ Erro ao fazer parse do proxy:', parseError);
-                    console.log('Conteúdo do proxy:', proxyData.contents);
-                }
-            }
-        }
-    } catch (proxyError) {
-        console.log('❌ Proxy também falhou:', proxyError.message);
-    }
-    
-    // Método 3: Tentar outro proxy
-    try {
-        console.log('📡 Tentativa 3: Usando proxy alternativo (cors-anywhere)...');
-        const proxyUrl2 = `https://cors-anywhere.herokuapp.com/${scriptUrl}`;
-        const proxyResponse2 = await fetch(proxyUrl2, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        if (proxyResponse2.ok) {
-            const result = await proxyResponse2.json();
             if (result.success && result.data) {
-                console.log(`✅ Sucesso via proxy alternativo! ${result.data.length} registros encontrados`);
                 return result.data;
             }
         }
-    } catch (proxyError2) {
-        console.log('❌ Proxy alternativo também falhou:', proxyError2.message);
+    } catch (directError) {
+        // Se falhar por CORS, usar proxy
+        try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scriptUrl)}`;
+            const proxyResponse = await fetch(proxyUrl);
+            
+            if (proxyResponse.ok) {
+                const proxyData = await proxyResponse.json();
+                
+                if (proxyData.contents) {
+                    const result = JSON.parse(proxyData.contents);
+                    
+                    if (result.success && result.data) {
+                        return result.data;
+                    }
+                }
+            }
+        } catch (proxyError) {
+            console.error('Erro ao usar proxy:', proxyError);
+        }
+        
+        throw directError;
     }
     
-    // Se todas as tentativas falharam
-    const errorMsg = 'Não foi possível conectar ao Google Sheets após várias tentativas. Verifique:\n1. Se o script está deployado corretamente\n2. Se a URL está correta\n3. Se o acesso está configurado como "Qualquer pessoa pode acessar"';
-    console.error('❌', errorMsg);
-    throw new Error(errorMsg);
+    throw new Error('Não foi possível obter dados do Google Sheets');
 }
 
 // Função para calcular médias por categoria a partir das respostas
