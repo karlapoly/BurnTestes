@@ -187,6 +187,7 @@ function startEvaluation() {
                         <option value="">Selecione o tipo de empresa</option>
                         <option value="cartorio">Cartório</option>
                         <option value="credito-consignado">Crédito Consignado</option>
+                        <option value="outra">Outra</option>
                     </select>
                 </div>
                 
@@ -596,7 +597,7 @@ function showSummary() {
     summaryHTML += `
         <div class="summary-section">
             <h4>Informações da Empresa</h4>
-            <p><strong>Tipo de Empresa:</strong> ${empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : 'Não selecionado'}</p>
+            <p><strong>Tipo de Empresa:</strong> ${empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : empresa === 'outra' ? 'Outra' : 'Não selecionado'}</p>
             <p><strong>Nome:</strong> ${nome || 'Não informado'}</p>
             <p><strong>Cargo:</strong> ${cargo || 'Não informado'}</p>
             <p><strong>Setor:</strong> ${setor || 'Não informado'}</p>
@@ -770,7 +771,7 @@ function saveDiagnosticData(results) {
             hora: getBrasiliaTimeString(),
             timestamp: getBrasiliaISOString(),
             empresa: document.getElementById('empresa').value,
-            tipoEmpresa: document.getElementById('empresa').value === 'credito-consignado' ? 'Crédito Consignado' : document.getElementById('empresa').value === 'cartorio' ? 'Cartório' : 'Não selecionado',
+            tipoEmpresa: document.getElementById('empresa').value === 'credito-consignado' ? 'Crédito Consignado' : document.getElementById('empresa').value === 'cartorio' ? 'Cartório' : document.getElementById('empresa').value === 'outra' ? 'Outra' : 'Não selecionado',
             pontuacaoGeral: results.overallScore,
             nivelRisco: results.riskLevel,
             nivelRiscoLabel: results.riskLabel,
@@ -1004,7 +1005,7 @@ function generateReportData(results) {
     const setor = document.getElementById('setor').value;
     
     return {
-        tipoEmpresa: empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : 'Não selecionado',
+        tipoEmpresa: empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : empresa === 'outra' ? 'Outra' : 'Não selecionado',
         data: getBrasiliaDateString(),
         timestamp: getBrasiliaISOString(),
         informacoes: {
@@ -1134,7 +1135,8 @@ function convertSheetDataToDiagnostics(sheetData) {
             timestamp: row.Timestamp || '',
             empresa: row.Empresa || row.empresa || '',
             tipoEmpresa: (row.Empresa || row.empresa) === 'credito-consignado' ? 'Crédito Consignado' : 
-                        (row.Empresa || row.empresa) === 'cartorio' ? 'Cartório' : 'Não selecionado',
+                        (row.Empresa || row.empresa) === 'cartorio' ? 'Cartório' : 
+                        (row.Empresa || row.empresa) === 'outra' ? 'Outra' : 'Não selecionado',
             pontuacaoGeral: overallScore,
             nivelRisco: riskLevel,
             nivelRiscoLabel: riskLabel,
@@ -1217,11 +1219,12 @@ async function viewCompanySummaries() {
 function organizeDataByCompany(diagnosticData) {
     const organizedData = {
         'cartorio': [],
-        'credito-consignado': []
+        'credito-consignado': [],
+        'outra': []
     };
     
     diagnosticData.forEach(diagnostic => {
-        if (diagnostic.empresa === 'cartorio' || diagnostic.empresa === 'credito-consignado') {
+        if (diagnostic.empresa === 'cartorio' || diagnostic.empresa === 'credito-consignado' || diagnostic.empresa === 'outra') {
             organizedData[diagnostic.empresa].push(diagnostic);
         }
     });
@@ -1247,7 +1250,7 @@ function showCompanyDataVisualization(companyData) {
             <div class="company-stats-grid">
                 ${Object.entries(stats).map(([company, stat]) => `
                     <div class="company-stat-card">
-                        <h3>${company === 'cartorio' ? 'Cartório' : 'Crédito Consignado'}</h3>
+                        <h3>${company === 'cartorio' ? 'Cartório' : company === 'credito-consignado' ? 'Crédito Consignado' : 'Outra'}</h3>
                         <div class="stat-numbers">
                             <div class="stat-item">
                                 <span class="stat-value">${stat.totalDiagnostics}</span>
@@ -1276,7 +1279,7 @@ function showCompanyDataVisualization(companyData) {
             
             <div class="charts-container">
                 ${Object.entries(stats).map(([company, stat], index) => {
-                    const companyName = company === 'cartorio' ? 'Cartório' : 'Crédito Consignado';
+                    const companyName = company === 'cartorio' ? 'Cartório' : company === 'credito-consignado' ? 'Crédito Consignado' : 'Outra';
                     const chartId = `chart-${company}-${index}`;
                     const categoryChartId = `category-chart-${company}-${index}`;
                     
@@ -1577,7 +1580,7 @@ function createExcelDataFromRealData(companyData) {
     
     // Dados reais
     Object.entries(companyData).forEach(([company, diagnostics]) => {
-        const companyName = company === 'cartorio' ? 'Cartório' : 'Crédito Consignado';
+        const companyName = company === 'cartorio' ? 'Cartório' : company === 'credito-consignado' ? 'Crédito Consignado' : 'Outra';
         
         diagnostics.forEach(diagnostic => {
             excelData.push([
