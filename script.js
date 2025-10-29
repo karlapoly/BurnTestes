@@ -683,7 +683,7 @@ async function sendToGoogleSheets() {
         };
         
         // URL do Google Apps Script Web App
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhUQTFr8jNk-Z0yuAw8e5dTOoZdvuni0MhQKuO_KdC4BH1-cGjp5E6xM2WXZdlsc7D/exec';
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbyzm9O88h4fFdll2dyuzIF4Ty_Rl-sl9wLkUXYLlrQrfpW7i5IK4uYcK6jjhvMberkT/exec';
         
         // Converter dados para FormData (formato mais compatível com Google Apps Script)
         const formDataToSend = new FormData();
@@ -1020,53 +1020,103 @@ function generateReportData(results) {
 
 // Função para buscar dados do Google Sheets
 async function fetchDataFromGoogleSheets() {
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyzm9O88h4fFdll2dyuzIF4Ty_Rl-sl9wLkUXYLlrQrfpW7i5IK4uYcK6jjhvMberkT/exec';
+    
+    console.log('🔄 Tentando buscar dados do Google Sheets...', scriptUrl);
+    
+    // Método 1: Tentar fetch direto primeiro
     try {
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhUQTFr8jNk-Z0yuAw8e5dTOoZdvuni0MhQKuO_KdC4BH1-cGjp5E6xM2WXZdlsc7D/exec';
-        
-        // Tentar fetch direto primeiro
-        try {
-            const response = await fetch(scriptUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    return result.data;
-                }
+        console.log('📡 Tentativa 1: Fetch direto...');
+        const response = await fetch(scriptUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
             }
-        } catch (fetchError) {
-            console.log('Erro ao fazer fetch direto (pode ser CORS), tentando proxy...', fetchError);
-        }
+        });
         
-        // Método alternativo: usar um proxy CORS para contornar o problema
-        // Como última tentativa, usar um proxy público
-        try {
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scriptUrl)}`;
-            const proxyResponse = await fetch(proxyUrl);
+        console.log('📥 Resposta recebida:', response.status, response.statusText);
+        
+        if (response.ok) {
+            const text = await response.text();
+            console.log('📄 Resposta texto:', text.substring(0, 200));
             
-            if (proxyResponse.ok) {
-                const proxyData = await proxyResponse.json();
-                const result = JSON.parse(proxyData.contents);
+            try {
+                const result = JSON.parse(text);
+                console.log('✅ Dados parseados com sucesso:', result);
                 
                 if (result.success && result.data) {
+                    console.log(`✅ Sucesso! ${result.data.length} registros encontrados`);
                     return result.data;
+                } else {
+                    console.warn('⚠️ Resposta sem dados:', result);
+                }
+            } catch (parseError) {
+                console.error('❌ Erro ao fazer parse do JSON:', parseError);
+                console.log('Resposta completa:', text);
+            }
+        } else {
+            console.warn(`⚠️ Resposta não OK: ${response.status} ${response.statusText}`);
+        }
+    } catch (fetchError) {
+        console.log('❌ Erro no fetch direto (pode ser CORS):', fetchError.message);
+    }
+    
+    // Método 2: Tentar com proxy CORS
+    try {
+        console.log('📡 Tentativa 2: Usando proxy CORS (allorigins.win)...');
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scriptUrl)}`;
+        const proxyResponse = await fetch(proxyUrl);
+        
+        console.log('📥 Resposta do proxy:', proxyResponse.status, proxyResponse.statusText);
+        
+        if (proxyResponse.ok) {
+            const proxyData = await proxyResponse.json();
+            console.log('📄 Dados do proxy:', proxyData);
+            
+            if (proxyData.contents) {
+                try {
+                    const result = JSON.parse(proxyData.contents);
+                    console.log('✅ Dados parseados do proxy:', result);
+                    
+                    if (result.success && result.data) {
+                        console.log(`✅ Sucesso via proxy! ${result.data.length} registros encontrados`);
+                        return result.data;
+                    }
+                } catch (parseError) {
+                    console.error('❌ Erro ao fazer parse do proxy:', parseError);
+                    console.log('Conteúdo do proxy:', proxyData.contents);
                 }
             }
-        } catch (proxyError) {
-            console.log('Proxy também falhou:', proxyError);
         }
-        
-        // Se todas as tentativas falharam, lançar erro
-        throw new Error('Não foi possível conectar ao Google Sheets. Verifique se o script está configurado corretamente e se os cabeçalhos CORS estão habilitados.');
-        
-    } catch (error) {
-        console.error('Erro ao buscar dados do Google Sheets:', error);
-        throw error;
+    } catch (proxyError) {
+        console.log('❌ Proxy também falhou:', proxyError.message);
     }
+    
+    // Método 3: Tentar outro proxy
+    try {
+        console.log('📡 Tentativa 3: Usando proxy alternativo (cors-anywhere)...');
+        const proxyUrl2 = `https://cors-anywhere.herokuapp.com/${scriptUrl}`;
+        const proxyResponse2 = await fetch(proxyUrl2, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (proxyResponse2.ok) {
+            const result = await proxyResponse2.json();
+            if (result.success && result.data) {
+                console.log(`✅ Sucesso via proxy alternativo! ${result.data.length} registros encontrados`);
+                return result.data;
+            }
+        }
+    } catch (proxyError2) {
+        console.log('❌ Proxy alternativo também falhou:', proxyError2.message);
+    }
+    
+    // Se todas as tentativas falharam
+    const errorMsg = 'Não foi possível conectar ao Google Sheets após várias tentativas. Verifique:\n1. Se o script está deployado corretamente\n2. Se a URL está correta\n3. Se o acesso está configurado como "Qualquer pessoa pode acessar"';
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
 }
 
 // Função para calcular médias por categoria a partir das respostas
