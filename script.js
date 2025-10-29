@@ -65,6 +65,35 @@ let answers = {};
 let totalQuestions = 0;
 let currentSection = 'home';
 
+// Função para obter data/hora no fuso horário de Brasília
+function getBrasiliaDateTime() {
+    const now = new Date();
+    // Converter para horário de Brasília (UTC-3)
+    const brasiliaOffset = -3 * 60; // -3 horas em minutos
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const brasiliaTime = new Date(utc + (brasiliaOffset * 60000));
+    return brasiliaTime;
+}
+
+// Função para obter timestamp ISO no horário de Brasília
+function getBrasiliaISOString() {
+    return getBrasiliaDateTime().toISOString();
+}
+
+// Função para obter data formatada no horário de Brasília
+function getBrasiliaDateString() {
+    return getBrasiliaDateTime().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Função para obter hora formatada no horário de Brasília
+function getBrasiliaTimeString() {
+    return getBrasiliaDateTime().toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'America/Sao_Paulo'
+    });
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     // Calcular total de perguntas
@@ -650,7 +679,7 @@ async function sendToGoogleSheets() {
             Q21: answers[20] || '',
             Q22: answers[21] || '',
             // Timestamp
-            timestamp: new Date().toISOString()
+            timestamp: getBrasiliaISOString()
         };
         
         // URL do Google Apps Script Web App
@@ -729,9 +758,9 @@ function saveDiagnosticData(results) {
         // Criar novo diagnóstico
         const newDiagnostic = {
             id: Date.now(), // ID único baseado em timestamp
-            data: new Date().toLocaleDateString('pt-BR'),
-            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            timestamp: new Date().toISOString(),
+            data: getBrasiliaDateString(),
+            hora: getBrasiliaTimeString(),
+            timestamp: getBrasiliaISOString(),
             empresa: document.getElementById('empresa').value,
             tipoEmpresa: document.getElementById('empresa').value === 'credito-consignado' ? 'Crédito Consignado' : document.getElementById('empresa').value === 'cartorio' ? 'Cartório' : 'Não selecionado',
             pontuacaoGeral: results.overallScore,
@@ -953,7 +982,7 @@ function downloadReport() {
     
     const link = document.createElement('a');
     link.href = URL.createObjectURL(dataBlob);
-    link.download = `relatorio-catalise-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `relatorio-catalise-${getBrasiliaISOString().split('T')[0]}.json`;
     link.click();
     
     alert('Relatório baixado com sucesso!');
@@ -968,8 +997,8 @@ function generateReportData(results) {
     
     return {
         tipoEmpresa: empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : 'Não selecionado',
-        data: new Date().toLocaleDateString('pt-BR'),
-        timestamp: new Date().toISOString(),
+        data: getBrasiliaDateString(),
+        timestamp: getBrasiliaISOString(),
         informacoes: {
             nome: nome || 'Anônimo',
             cargo: cargo || 'Não informado',
@@ -994,33 +1023,45 @@ async function fetchDataFromGoogleSheets() {
     try {
         const scriptUrl = 'https://script.google.com/macros/s/AKfycbzLClFbFWOGGl1GWDokGRhdvyajvMT-0L2yKIduuR5rxvu3MPaZHB1UQcSXCbJcbFlo/exec';
         
-        const response = await fetch(scriptUrl, {
-            method: 'GET',
-            mode: 'no-cors' // Google Apps Script pode precisar de no-cors
-        });
-        
-        // Com no-cors, não podemos ler a resposta diretamente
-        // Mas podemos tentar com um proxy ou usar uma abordagem diferente
-        // Tentando primeiro com cors, se falhar, tentaremos outra abordagem
-        
-        // Tentar fazer fetch normal primeiro
+        // Tentar fetch direto primeiro
         try {
-            const corsResponse = await fetch(scriptUrl + '?callback=?', {
-                method: 'GET'
+            const response = await fetch(scriptUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
             
-            if (corsResponse.ok) {
-                const result = await corsResponse.json();
+            if (response.ok) {
+                const result = await response.json();
                 if (result.success && result.data) {
                     return result.data;
                 }
             }
-        } catch (corsError) {
-            console.log('Tentando método alternativo...', corsError);
+        } catch (fetchError) {
+            console.log('Erro ao fazer fetch direto (pode ser CORS), tentando proxy...', fetchError);
         }
         
-        // Método alternativo usando JSONP ou retornando erro
-        throw new Error('Não foi possível conectar ao Google Sheets. Verifique se o script está configurado corretamente.');
+        // Método alternativo: usar um proxy CORS para contornar o problema
+        // Como última tentativa, usar um proxy público
+        try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(scriptUrl)}`;
+            const proxyResponse = await fetch(proxyUrl);
+            
+            if (proxyResponse.ok) {
+                const proxyData = await proxyResponse.json();
+                const result = JSON.parse(proxyData.contents);
+                
+                if (result.success && result.data) {
+                    return result.data;
+                }
+            }
+        } catch (proxyError) {
+            console.log('Proxy também falhou:', proxyError);
+        }
+        
+        // Se todas as tentativas falharam, lançar erro
+        throw new Error('Não foi possível conectar ao Google Sheets. Verifique se o script está configurado corretamente e se os cabeçalhos CORS estão habilitados.');
         
     } catch (error) {
         console.error('Erro ao buscar dados do Google Sheets:', error);
@@ -1085,8 +1126,8 @@ function convertSheetDataToDiagnostics(sheetData) {
         
         return {
             id: row.Timestamp ? Date.parse(row.Timestamp) : Date.now(),
-            data: row.Timestamp ? new Date(row.Timestamp).toLocaleDateString('pt-BR') : '',
-            hora: row.Timestamp ? new Date(row.Timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+            data: row.Timestamp ? new Date(row.Timestamp).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '',
+            hora: row.Timestamp ? new Date(row.Timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '',
             timestamp: row.Timestamp || '',
             empresa: row.Empresa || row.empresa || '',
             tipoEmpresa: (row.Empresa || row.empresa) === 'credito-consignado' ? 'Crédito Consignado' : 
