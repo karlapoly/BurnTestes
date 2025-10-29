@@ -989,8 +989,128 @@ function generateReportData(results) {
     };
 }
 
-// Função para visualizar resumos por empresa (apenas para admin)
-function viewCompanySummaries() {
+// Função para buscar dados do Google Sheets
+async function fetchDataFromGoogleSheets() {
+    try {
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzLClFbFWOGGl1GWDokGRhdvyajvMT-0L2yKIduuR5rxvu3MPaZHB1UQcSXCbJcbFlo/exec';
+        
+        const response = await fetch(scriptUrl, {
+            method: 'GET',
+            mode: 'no-cors' // Google Apps Script pode precisar de no-cors
+        });
+        
+        // Com no-cors, não podemos ler a resposta diretamente
+        // Mas podemos tentar com um proxy ou usar uma abordagem diferente
+        // Tentando primeiro com cors, se falhar, tentaremos outra abordagem
+        
+        // Tentar fazer fetch normal primeiro
+        try {
+            const corsResponse = await fetch(scriptUrl + '?callback=?', {
+                method: 'GET'
+            });
+            
+            if (corsResponse.ok) {
+                const result = await corsResponse.json();
+                if (result.success && result.data) {
+                    return result.data;
+                }
+            }
+        } catch (corsError) {
+            console.log('Tentando método alternativo...', corsError);
+        }
+        
+        // Método alternativo usando JSONP ou retornando erro
+        throw new Error('Não foi possível conectar ao Google Sheets. Verifique se o script está configurado corretamente.');
+        
+    } catch (error) {
+        console.error('Erro ao buscar dados do Google Sheets:', error);
+        throw error;
+    }
+}
+
+// Função para calcular médias por categoria a partir das respostas
+function calculateCategoryAveragesFromAnswers(answers) {
+    // Organização das perguntas por categoria (mesma ordem do array questions)
+    const categoryRanges = [
+        { start: 0, end: 5, name: 'Organização e Carga de Trabalho' },      // Q1-Q6 (índices 0-5)
+        { start: 6, end: 10, name: 'Comunicação e Clima Organizacional' },  // Q7-Q11 (índices 6-10)
+        { start: 11, end: 14, name: 'Reconhecimento e Valorização' },       // Q12-Q15 (índices 11-14)
+        { start: 15, end: 17, name: 'Autonomia e Participação' },           // Q16-Q18 (índices 15-17)
+        { start: 18, end: 21, name: 'Saúde Mental e Suporte' }               // Q19-Q22 (índices 18-21)
+    ];
+    
+    const categoryAverages = {};
+    
+    categoryRanges.forEach(range => {
+        const categoryAnswers = answers.slice(range.start, range.end + 1);
+        const validAnswers = categoryAnswers.filter(a => a !== null && a !== '' && !isNaN(a));
+        const sum = validAnswers.reduce((acc, val) => acc + parseInt(val), 0);
+        const average = validAnswers.length > 0 ? sum / validAnswers.length : 0;
+        categoryAverages[range.name] = average;
+    });
+    
+    return categoryAverages;
+}
+
+// Função para converter dados da planilha para formato de diagnóstico
+function convertSheetDataToDiagnostics(sheetData) {
+    return sheetData.map(row => {
+        // Calcular pontuações a partir das respostas Q1-Q22
+        const answers = [];
+        for (let i = 1; i <= 22; i++) {
+            const qValue = row[`Q${i}`] || row[`q${i}`] || '';
+            answers.push(qValue && !isNaN(qValue) ? parseInt(qValue) : null);
+        }
+        
+        // Calcular pontuação geral
+        const validAnswers = answers.filter(a => a !== null && a !== '' && !isNaN(a));
+        const totalScore = validAnswers.reduce((sum, val) => sum + parseInt(val), 0);
+        const overallScore = validAnswers.length > 0 ? totalScore / validAnswers.length : 0;
+        
+        // Determinar nível de risco
+        let riskLevel, riskLabel;
+        if (overallScore >= 4.0) {
+            riskLevel = 'low';
+            riskLabel = 'Clima saudável e equilibrado';
+        } else if (overallScore >= 3.0) {
+            riskLevel = 'medium';
+            riskLabel = 'Pontos de atenção — fatores de estresse presentes';
+        } else {
+            riskLevel = 'high';
+            riskLabel = 'Risco alto de estresse e burnout — requer plano de ação';
+        }
+        
+        // Calcular pontuações por categoria
+        const categoryAverages = calculateCategoryAveragesFromAnswers(answers);
+        
+        return {
+            id: row.Timestamp ? Date.parse(row.Timestamp) : Date.now(),
+            data: row.Timestamp ? new Date(row.Timestamp).toLocaleDateString('pt-BR') : '',
+            hora: row.Timestamp ? new Date(row.Timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+            timestamp: row.Timestamp || '',
+            empresa: row.Empresa || row.empresa || '',
+            tipoEmpresa: (row.Empresa || row.empresa) === 'credito-consignado' ? 'Crédito Consignado' : 
+                        (row.Empresa || row.empresa) === 'cartorio' ? 'Cartório' : 'Não selecionado',
+            pontuacaoGeral: overallScore,
+            nivelRisco: riskLevel,
+            nivelRiscoLabel: riskLabel,
+            porcentagemRisco: Math.round((overallScore / 5) * 100),
+            pontuacoesPorCategoria: categoryAverages,
+            informacoes: {
+                nome: row.Nome || row.nome || '',
+                cargo: row.Cargo || row.cargo || '',
+                setor: row.Setor || row.setor || ''
+            },
+            respostasDetalhadas: answers.reduce((acc, val, idx) => {
+                acc[idx] = val;
+                return acc;
+            }, {})
+        };
+    });
+}
+
+// Função para visualizar resumos por empresa (BUSCANDO DO GOOGLE SHEETS)
+async function viewCompanySummaries() {
     // Solicitar senha para acessar dados das empresas
     const password = prompt('Digite a senha para acessar os resumos por empresa:');
     
@@ -1001,13 +1121,27 @@ function viewCompanySummaries() {
     }
     
     try {
-        // Buscar dados do localStorage
-        const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
+        // Mostrar loading
+        const diagnosticoSection = document.getElementById('diagnostico-section');
+        diagnosticoSection.innerHTML = `
+            <div class="results-container">
+                <div class="results-header">
+                    <h2>📊 Carregando dados...</h2>
+                    <p>Aguarde enquanto buscamos os dados da planilha.</p>
+                </div>
+            </div>
+        `;
         
-        if (allData.length === 0) {
-            alert('Nenhum diagnóstico encontrado.');
+        // Buscar dados do Google Sheets
+        const sheetData = await fetchDataFromGoogleSheets();
+        
+        if (!sheetData || sheetData.length === 0) {
+            alert('Nenhum diagnóstico encontrado na planilha.');
             return;
         }
+        
+        // Converter dados da planilha para formato de diagnóstico
+        const allData = convertSheetDataToDiagnostics(sheetData);
         
         // Organizar dados por empresa
         const companyData = organizeDataByCompany(allData);
@@ -1017,7 +1151,21 @@ function viewCompanySummaries() {
         
     } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        alert('Erro ao carregar dados. Verifique se há dados salvos.');
+        alert('Erro ao carregar dados da planilha. Verifique sua conexão e tente novamente.');
+        
+        // Tentar usar dados locais como fallback
+        try {
+            const localData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
+            if (localData.length > 0) {
+                const useLocal = confirm('Não foi possível conectar à planilha. Deseja usar dados locais?');
+                if (useLocal) {
+                    const companyData = organizeDataByCompany(localData);
+                    showCompanyDataVisualization(companyData);
+                }
+            }
+        } catch (localError) {
+            console.error('Erro ao usar dados locais:', localError);
+        }
     }
 }
 
@@ -1159,9 +1307,13 @@ function calculateCategoryAveragesForCompany(diagnostics) {
     return averages;
 }
 
-// Função para criar os gráficos
+// Função para criar os gráficos (MODIFICADA PARA USAR DADOS PASSADOS)
 function createChartsForCompanies(stats, companyData) {
-    const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
+    // Converter companyData em array plano para usar nas funções
+    const allData = [];
+    Object.values(companyData).forEach(companyDiagnostics => {
+        allData.push(...companyDiagnostics);
+    });
     
     Object.entries(stats).forEach(([company, stat], index) => {
         const chartId = `chart-${company}-${index}`;
