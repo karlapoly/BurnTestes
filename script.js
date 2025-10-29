@@ -179,12 +179,12 @@ function startEvaluation() {
             <!-- Informações Básicas -->
             <div id="basic-info-step" class="form-step">
                 <h3>Informações Básicas</h3>
-                <p class="step-description">Selecione o tipo de empresa (obrigatório) e outras informações opcionais</p>
+                <p class="step-description">Selecione a empresa (obrigatório) e outras informações opcionais</p>
                 
                 <div class="form-group">
-                    <label for="empresa">Tipo de Empresa *</label>
+                    <label for="empresa">Empresa *</label>
                     <select id="empresa" name="empresa" required onchange="updateNavigationButtons()">
-                        <option value="">Selecione o tipo de empresa</option>
+                        <option value="">Selecione a empresa</option>
                         <option value="cartorio">Cartório</option>
                         <option value="credito-consignado">Crédito Consignado</option>
                         <option value="outra">Outra</option>
@@ -218,7 +218,7 @@ function startEvaluation() {
                 </div>
                 
                 <div class="privacy-notice">
-                    <p><strong>Importante:</strong> A seleção do tipo de empresa é obrigatória para organizar os resultados. As demais informações são opcionais e você pode responder o questionário de forma anônima se preferir.</p>
+                    <p><strong>Importante:</strong> A seleção da empresa é obrigatória para organizar os resultados. As demais informações são opcionais e você pode responder o questionário de forma anônima se preferir.</p>
                 </div>
             </div>
 
@@ -597,7 +597,7 @@ function showSummary() {
     summaryHTML += `
         <div class="summary-section">
             <h4>Informações da Empresa</h4>
-            <p><strong>Tipo de Empresa:</strong> ${empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : empresa === 'outra' ? 'Outra' : 'Não selecionado'}</p>
+            <p><strong>Empresa:</strong> ${empresa === 'credito-consignado' ? 'Crédito Consignado' : empresa === 'cartorio' ? 'Cartório' : empresa === 'outra' ? 'Outra' : 'Não selecionado'}</p>
             <p><strong>Nome:</strong> ${nome || 'Não informado'}</p>
             <p><strong>Cargo:</strong> ${cargo || 'Não informado'}</p>
             <p><strong>Setor:</strong> ${setor || 'Não informado'}</p>
@@ -629,7 +629,7 @@ async function submitForm() {
     // Verificar se empresa foi preenchida
     const empresa = document.getElementById('empresa').value.trim();
     if (!empresa) {
-        alert('Por favor, informe o tipo de empresa.');
+        alert('Por favor, informe a empresa.');
         return;
     }
     
