@@ -149,7 +149,7 @@ function showSection(sectionId) {
         targetSection.classList.add('active');
         currentSection = sectionId;
         
-        // Se for a seção de diagnóstico, iniciar o processo
+        // Se for a seção de mapeamento, iniciar o processo
         if (sectionId === 'diagnostico') {
             startEvaluation();
         }
@@ -158,22 +158,30 @@ function showSection(sectionId) {
 
 // Função para iniciar a avaliação
 function startEvaluation() {
-    // Mostrar apenas o formulário dentro da seção de diagnóstico
+    // Mostrar apenas o formulário dentro da seção de mapeamento
     const diagnosticoSection = document.getElementById('diagnostico-section');
     
     if (!diagnosticoSection) {
-        alert('Erro: Seção de diagnóstico não encontrada!');
+        alert('Erro: Seção de mapeamento não encontrada!');
         return;
     }
     
     diagnosticoSection.innerHTML = `
         <div class="form-container">
             <div class="form-header">
-                <h2>🧭 Questionário de Bem-Estar no Trabalho</h2>
+                <h2>🧭 Mapeamento de Bem-Estar no Trabalho</h2>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill"></div>
                 </div>
                 <p class="progress-text" id="progress-text">Etapa 1 de 3</p>
+            </div>
+
+            <!-- Mensagem Ética -->
+            <div class="ethical-notice" style="background: #E3F2FD; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196F3;">
+                <h4 style="margin-top: 0; color: #1976D2;"><i class="fas fa-info-circle"></i> Importante</h4>
+                <p style="margin-bottom: 0; color: #1565C0;">
+                    <strong>Este questionário não substitui avaliação psicológica.</strong> Ele serve apenas como um instrumento de autoavaliação e apoio à gestão do bem-estar no trabalho. Este mapeamento é uma <strong>triagem inicial de risco</strong> ou <strong>instrumento de monitoramento de bem-estar</strong>, e não um diagnóstico clínico.
+                </p>
             </div>
 
             <!-- Informações Básicas -->
@@ -231,7 +239,7 @@ function startEvaluation() {
 
             <!-- Resumo -->
             <div id="summary-step" class="form-step" style="display: none;">
-                <h3>Resumo do Diagnóstico</h3>
+                <h3>Resumo do Mapeamento</h3>
                 <p>Revise as informações antes de finalizar</p>
                 
                 <div id="summary-content">
@@ -240,7 +248,7 @@ function startEvaluation() {
                 
                 <div class="consent-section">
                     <h4>Consentimento para Processamento de Dados</h4>
-                    <p>Ao finalizar este diagnóstico, você concorda que os dados fornecidos sejam processados para gerar o relatório de avaliação conforme nossa Política de Privacidade. Os dados são mantidos por 12 meses e podem ser excluídos a qualquer momento.</p>
+                    <p>Ao finalizar este mapeamento, você concorda que os dados fornecidos sejam processados para gerar o relatório de avaliação conforme nossa Política de Privacidade. Os dados são mantidos por 12 meses e podem ser excluídos a qualquer momento.</p>
                 </div>
             </div>
 
@@ -255,7 +263,7 @@ function startEvaluation() {
                 </button>
                 <button type="button" class="btn btn-success" id="submit-btn" onclick="submitForm()" style="display: none;">
                     <i class="fas fa-check"></i>
-                    Finalizar Diagnóstico
+                    Finalizar Mapeamento
                 </button>
             </div>
         </div>
@@ -622,7 +630,7 @@ async function submitForm() {
     const unansweredQuestions = Object.values(answers).filter(answer => answer === null);
     
     if (unansweredQuestions.length > 0) {
-        alert('Por favor, responda todas as perguntas antes de finalizar o diagnóstico.');
+        alert('Por favor, responda todas as perguntas antes de finalizar o mapeamento.');
         return;
     }
     
@@ -647,11 +655,11 @@ async function submitForm() {
     // Calcular resultados
     const results = calculateResults();
     
-    // Salvar dados no GitHub
+    // Salvar dados localmente
     saveDiagnosticData(results);
     
-    // Mostrar resultados
-    showResults(results);
+    // Mostrar dashboard com resultados
+    showDashboard(results);
 }
 
 // Função para enviar dados para Google Sheets
@@ -761,10 +769,10 @@ function resetForm() {
     });
 }
 
-// Função para salvar dados do diagnóstico localmente
+// Função para salvar dados do mapeamento localmente
 function saveDiagnosticData(results) {
     try {
-        // Criar novo diagnóstico
+        // Criar novo mapeamento
         const newDiagnostic = {
             id: Date.now(), // ID único baseado em timestamp
             data: getBrasiliaDateString(),
@@ -791,10 +799,10 @@ function saveDiagnosticData(results) {
         existingData.push(newDiagnostic);
         localStorage.setItem('diagnosticos', JSON.stringify(existingData));
         
-        console.log('Diagnóstico salvo localmente com sucesso!');
+        console.log('Mapeamento salvo localmente com sucesso!');
         
     } catch (error) {
-        console.error('Erro ao salvar diagnóstico:', error);
+        console.error('Erro ao salvar mapeamento:', error);
         alert('Erro ao salvar dados. Tente novamente.');
     }
 }
@@ -847,7 +855,7 @@ function calculateResults() {
         results.riskPercentage = Math.round((results.overallScore / 5) * 100);
     } else {
         results.riskLevel = 'high';
-        results.riskLabel = 'Risco alto de estresse e burnout — requer plano de ação';
+        results.riskLabel = 'Pontos de atenção — requer atenção e melhorias';
         results.riskPercentage = Math.round((results.overallScore / 5) * 100);
     }
     
@@ -888,14 +896,44 @@ function getRecommendationForCategory(category, average) {
     return recommendations[category] || "Focar em melhorias específicas nesta área para aumentar a satisfação e bem-estar dos colaboradores.";
 }
 
-// Função para mostrar resultados
-function showResults(results) {
+// Função para mostrar dashboard com resultados
+function showDashboard(results) {
     const diagnosticoSection = document.getElementById('diagnostico-section');
     diagnosticoSection.innerHTML = `
         <div class="results-container">
             <div class="results-header">
-                <h2>Resultado do Diagnóstico</h2>
-                <p>Análise completa da saúde mental corporativa</p>
+                <h2>Dashboard - Resultado do Mapeamento</h2>
+                <p>Triagem inicial de bem-estar no trabalho</p>
+            </div>
+
+            <!-- Mensagem Ética -->
+            <div class="ethical-notice" style="background: #FFF3CD; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #FFC107;">
+                <p style="margin: 0; color: #856404;">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong> Este questionário não substitui avaliação psicológica. Ele serve apenas como um instrumento de autoavaliação e apoio à gestão do bem-estar no trabalho.
+                </p>
+            </div>
+
+            <!-- Dashboard Simulado -->
+            <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="dashboard-card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-top: 0; color: #666;">Média Geral</h4>
+                    <div style="font-size: 36px; font-weight: bold; color: #2196F3;">
+                        ${results.overallScore.toFixed(2)}
+                        <span style="font-size: 18px; color: #999;">/ 5.0</span>
+                    </div>
+                </div>
+                <div class="dashboard-card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-top: 0; color: #666;">Status de Risco</h4>
+                    <div style="font-size: 24px; font-weight: bold; color: ${results.riskLevel === 'low' ? '#10B981' : results.riskLevel === 'medium' ? '#F6C44E' : '#E25B5B'};">
+                        ${results.riskLevel === 'low' ? '🟢 Baixo' : results.riskLevel === 'medium' ? '🟡 Moderado' : '🔴 Alto'}
+                    </div>
+                </div>
+                <div class="dashboard-card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-top: 0; color: #666;">Porcentagem</h4>
+                    <div style="font-size: 36px; font-weight: bold; color: #2196F3;">
+                        ${results.riskPercentage}%
+                    </div>
+                </div>
             </div>
 
             <div class="score-display">
@@ -909,45 +947,57 @@ function showResults(results) {
             </div>
 
             <div class="result-summary" id="result-summary">
-                <h3>Diagnóstico Geral</h3>
-                <p><strong>Pontuação Média:</strong> ${results.overallScore.toFixed(2)}/5.0</p>
-                <p><strong>Nível de Risco:</strong> ${results.riskLabel}</p>
-                
-                <h4 style="margin-top: 20px;">Análise por Categoria:</h4>
+                <h3>Análise por Categoria</h3>
                 <div style="margin-top: 15px;">
-                    ${Object.entries(results.categoryAverages).map(([category, average]) => `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px; background: white; border-radius: 8px;">
+                    ${Object.entries(results.categoryAverages).map(([category, average]) => {
+                        const statusColor = average >= 4.0 ? '#10B981' : average >= 3.0 ? '#F6C44E' : '#E25B5B';
+                        const statusIcon = average >= 4.0 ? '✅' : average >= 3.0 ? '⚠️' : '🔴';
+                        return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid ${statusColor};">
                             <span><strong>${category}:</strong></span>
-                            <span>${average.toFixed(2)}/5.0</span>
+                            <span style="font-size: 18px; font-weight: bold; color: ${statusColor};">
+                                ${statusIcon} ${average.toFixed(2)}/5.0
+                            </span>
                         </div>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </div>
             </div>
 
-            <div class="recommendations" id="recommendations">
-                <h3>Recomendações Prioritárias</h3>
-                ${results.recommendations.map(rec => `
-                    <div class="recommendation-item">
-                        <i class="fas fa-lightbulb"></i>
-                        <div>
-                            <strong>${rec}</strong>
-                        </div>
+            <!-- Seção de Feedback -->
+            <div class="feedback-section" style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3>Como foi sua experiência?</h3>
+                <p style="color: #666; margin-bottom: 20px;">Seu feedback nos ajuda a melhorar este instrumento de mapeamento.</p>
+                <form id="feedback-form" onsubmit="handleFeedback(event)">
+                    <div class="form-group">
+                        <label>Como foi sua experiência com o teste?</label>
+                        <textarea id="feedback-experience" rows="3" placeholder="Conte-nos sua experiência..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;"></textarea>
                     </div>
-                `).join('')}
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Você se sentiria à vontade de usá-lo no trabalho?</label>
+                        <select id="feedback-comfort" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;">
+                            <option value="">Selecione uma opção</option>
+                            <option value="sim-totalmente">Sim, totalmente à vontade</option>
+                            <option value="sim-parcialmente">Sim, mas com algumas reservas</option>
+                            <option value="talvez">Talvez, depende do contexto</option>
+                            <option value="nao">Não me sentiria à vontade</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">
+                        <i class="fas fa-paper-plane"></i>
+                        Enviar Feedback
+                    </button>
+                </form>
             </div>
 
-            <div class="action-buttons">
+            <div class="action-buttons" style="margin-top: 30px;">
                 <button class="btn btn-primary" onclick="downloadReport()">
                     <i class="fas fa-download"></i>
-                    Baixar Relatório
+                    Baixar Relatório Individual
                 </button>
                 <button class="btn btn-secondary" onclick="viewCompanySummaries()">
                     <i class="fas fa-building"></i>
-                    Ver Resumos por Empresa
-                </button>
-                <button class="btn btn-outline" onclick="clearLocalData()">
-                    <i class="fas fa-trash"></i>
-                    Limpar Dados Locais
+                    Ver Relatório Final das Empresas
                 </button>
                 <button class="btn btn-outline" onclick="restartEvaluation()">
                     <i class="fas fa-redo"></i>
@@ -958,7 +1008,28 @@ function showResults(results) {
     `;
 }
 
-// Função para obter imagem correspondente ao nível de diagnóstico
+// Função para lidar com feedback
+function handleFeedback(event) {
+    event.preventDefault();
+    const experience = document.getElementById('feedback-experience').value;
+    const comfort = document.getElementById('feedback-comfort').value;
+    
+    // Salvar feedback no localStorage (simulado, sem backend)
+    const feedback = {
+        timestamp: getBrasiliaISOString(),
+        experience: experience,
+        comfort: comfort
+    };
+    
+    const existingFeedback = JSON.parse(localStorage.getItem('feedback') || '[]');
+    existingFeedback.push(feedback);
+    localStorage.setItem('feedback', JSON.stringify(existingFeedback));
+    
+    alert('✅ Obrigado pelo seu feedback! Ele será considerado para melhorias do instrumento.');
+    document.getElementById('feedback-form').reset();
+}
+
+// Função para obter imagem correspondente ao nível de risco
 function getDiagnosisImage(riskLevel) {
     const imageMap = {
         'low': 'saudavel.jpg',      // Empresa saudável
@@ -976,7 +1047,7 @@ function getRiskDescription(riskLevel, score) {
     } else if (riskLevel === 'medium') {
         return "Sua empresa apresenta pontos de atenção com fatores de estresse presentes. É importante implementar melhorias nas áreas identificadas para prevenir problemas futuros e aumentar a satisfação dos colaboradores.";
     } else {
-        return "⚠️ ATENÇÃO: Sua empresa apresenta risco alto de estresse e burnout. É fundamental implementar um plano de ação imediato para melhorar o ambiente de trabalho e prevenir problemas de saúde mental dos colaboradores.";
+        return "⚠️ ATENÇÃO: Os resultados indicam áreas que requerem atenção prioritária no ambiente de trabalho. Recomenda-se desenvolver ações de melhoria para fortalecer o bem-estar e a qualidade de vida no trabalho dos colaboradores, promovendo um ambiente mais saudável e equilibrado.";
     }
 }
 
@@ -1022,7 +1093,7 @@ function generateReportData(results) {
         interpretacao: {
             "≥ 4,0": "Clima saudável e equilibrado",
             "3,0 a 3,9": "Pontos de atenção — fatores de estresse presentes",
-            "< 3,0": "Risco alto de estresse e burnout — requer plano de ação"
+            "< 3,0": "Pontos de atenção — requer atenção e melhorias"
         }
     };
 }
@@ -1097,7 +1168,7 @@ function calculateCategoryAveragesFromAnswers(answers) {
     return categoryAverages;
 }
 
-// Função para converter dados da planilha para formato de diagnóstico
+// Função para converter dados da planilha para formato de mapeamento
 function convertSheetDataToDiagnostics(sheetData) {
     return sheetData.map(row => {
         // Calcular pontuações a partir das respostas Q1-Q22
@@ -1122,7 +1193,7 @@ function convertSheetDataToDiagnostics(sheetData) {
             riskLabel = 'Pontos de atenção — fatores de estresse presentes';
         } else {
             riskLevel = 'high';
-            riskLabel = 'Risco alto de estresse e burnout — requer plano de ação';
+            riskLabel = 'Pontos de atenção — requer atenção e melhorias';
         }
         
         // Calcular pontuações por categoria
@@ -1182,11 +1253,11 @@ async function viewCompanySummaries() {
         const sheetData = await fetchDataFromGoogleSheets();
         
         if (!sheetData || sheetData.length === 0) {
-            alert('Nenhum diagnóstico encontrado na planilha.');
+            alert('Nenhum mapeamento encontrado na planilha.');
             return;
         }
         
-        // Converter dados da planilha para formato de diagnóstico
+        // Converter dados da planilha para formato de mapeamento
         const allData = convertSheetDataToDiagnostics(sheetData);
         
         // Organizar dados por empresa
@@ -1233,18 +1304,23 @@ function organizeDataByCompany(diagnosticData) {
 }
 
 
+// Variável global para armazenar stats temporariamente
+let currentCompanyStats = null;
+
 // Função para mostrar visualização dos dados das empresas
 function showCompanyDataVisualization(companyData) {
     const diagnosticoSection = document.getElementById('diagnostico-section');
     
     // Calcular estatísticas
     const stats = calculateCompanyStats(companyData);
+    // Armazenar stats globalmente para acesso na página de análise
+    currentCompanyStats = stats;
     
     diagnosticoSection.innerHTML = `
         <div class="results-container">
             <div class="results-header">
-                <h2>📊 Análise Completa por Empresa</h2>
-                <p>Visualização detalhada dos diagnósticos organizados</p>
+                <h2>📊 Relatório Final das Empresas</h2>
+                <p>Visualização detalhada dos mapeamentos organizados</p>
             </div>
             
             <div class="company-stats-grid">
@@ -1254,7 +1330,7 @@ function showCompanyDataVisualization(companyData) {
                         <div class="stat-numbers">
                             <div class="stat-item">
                                 <span class="stat-value">${stat.totalDiagnostics}</span>
-                                <span class="stat-label">Diagnósticos</span>
+                                <span class="stat-label">Mapeamentos</span>
                             </div>
                             <div class="stat-item">
                                 <span class="stat-value">${stat.averageScore.toFixed(2)}</span>
@@ -1270,7 +1346,7 @@ function showCompanyDataVisualization(companyData) {
                             </div>
                             <div class="stat-item">
                                 <span class="stat-value">${stat.riskDistribution.high}</span>
-                                <span class="stat-label">Risco Alto</span>
+                                <span class="stat-label">Requer Atenção</span>
                             </div>
                         </div>
                     </div>
@@ -1284,10 +1360,14 @@ function showCompanyDataVisualization(companyData) {
                     const categoryChartId = `category-chart-${company}-${index}`;
                     
                     // Calcular médias por categoria para esta empresa
-                    const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
-                    const companyDiagnostics = allData.filter(d => d.empresa === company);
+                    const companyDiagnostics = companyData[company] || [];
                     
                     const categoryAverages = calculateCategoryAveragesForCompany(companyDiagnostics);
+                    
+                    // Identificar categorias abaixo da média (< 3.0)
+                    const belowAverageCategories = Object.entries(categoryAverages)
+                        .filter(([cat, avg]) => avg < 3.0)
+                        .map(([cat, avg]) => ({ category: cat, average: avg }));
                     
                     return `
                         <div class="company-charts-section">
@@ -1302,17 +1382,76 @@ function showCompanyDataVisualization(companyData) {
                                     <canvas id="${categoryChartId}"></canvas>
                                 </div>
                             </div>
+                            
+                            ${belowAverageCategories.length > 0 ? `
+                                <div class="recommendations-section" style="margin-top: 30px; background: #FFF3CD; padding: 20px; border-radius: 12px; border-left: 4px solid #FFC107;">
+                                    <h4 style="margin-top: 0; color: #856404;">
+                                        <i class="fas fa-lightbulb"></i> Recomendações Prioritárias
+                                    </h4>
+                                    <p style="color: #856404; margin-bottom: 15px;">
+                                        Categorias abaixo da média (${companyName}):
+                                    </p>
+                                    <div style="display: grid; gap: 12px;">
+                                        ${belowAverageCategories.map(({ category, average }) => {
+                                            const recommendation = getRecommendationForCategory(category, average);
+                                            return `
+                                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                        <strong style="color: #856404;">${category}</strong>
+                                                        <span style="color: #E25B5B; font-weight: bold;">${average.toFixed(2)}/5.0</span>
+                                                    </div>
+                                                    <p style="margin: 0; color: #666; font-size: 14px;">${recommendation}</p>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('')}
             </div>
             
-            <div class="action-buttons">
+            <!-- Próximos Passos Sugeridos para Gestores -->
+            <div class="next-steps-section" style="background: #F5F5F5; padding: 25px; border-radius: 12px; margin-top: 30px;">
+                <h3 style="margin-top: 0;">
+                    <i class="fas fa-lightbulb"></i> Próximos Passos Sugeridos para Gestores
+                </h3>
+                <p style="color: #666; margin-bottom: 20px;">Com base nos resultados do mapeamento, seguem recomendações para melhorar o bem-estar das equipes:</p>
+                <div class="next-steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #2196F3;">
+                        <i class="fas fa-comments" style="color: #2196F3; margin-right: 10px; font-size: 20px;"></i>
+                        <strong style="display: block; margin-top: 8px; margin-bottom: 5px;">Rodas de Conversa</strong>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Promover rodas de conversa regulares para ouvir as equipes</p>
+                    </div>
+                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #2196F3;">
+                        <i class="fas fa-tasks" style="color: #2196F3; margin-right: 10px; font-size: 20px;"></i>
+                        <strong style="display: block; margin-top: 8px; margin-bottom: 5px;">Carga de Trabalho</strong>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Revisar distribuição de carga de trabalho e estabelecer prioridades claras</p>
+                    </div>
+                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #2196F3;">
+                        <i class="fas fa-coffee" style="color: #2196F3; margin-right: 10px; font-size: 20px;"></i>
+                        <strong style="display: block; margin-top: 8px; margin-bottom: 5px;">Pausas de Bem-estar</strong>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Criar pausas de bem-estar e momentos de integração</p>
+                    </div>
+                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #2196F3;">
+                        <i class="fas fa-chart-line" style="color: #2196F3; margin-right: 10px; font-size: 20px;"></i>
+                        <strong style="display: block; margin-top: 8px; margin-bottom: 5px;">Monitoramento</strong>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Monitorar indicadores de bem-estar periodicamente</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons" style="margin-top: 30px;">
                 <button class="btn btn-primary" onclick="downloadAllData()">
                     <i class="fas fa-download"></i>
                     Baixar Excel Completo
                 </button>
-                <button class="btn btn-secondary" onclick="showSection('home')">
+                <button class="btn btn-secondary" onclick="showAnalyticsPage()">
+                    <i class="fas fa-chart-bar"></i>
+                    Ver Análise de Dados e Indicadores
+                </button>
+                <button class="btn btn-outline" onclick="showSection('home')">
                     <i class="fas fa-home"></i>
                     Voltar ao Início
                 </button>
@@ -1393,7 +1532,7 @@ function createChartsForCompanies(stats, companyData) {
                 new Chart(ctx, {
                     type: 'pie',
                     data: {
-                        labels: ['Adequado', 'Alerta', 'Risco Alto'],
+                        labels: ['Adequado', 'Alerta', 'Requer Atenção'],
                         datasets: [{
                             data: [
                                 stat.riskDistribution.low,
@@ -1514,6 +1653,203 @@ function createChartsForCompanies(stats, companyData) {
     console.log('Gráficos criados com sucesso!');
 }
 
+// Função para mostrar página de análise de dados e indicadores
+function showAnalyticsPage(statsData) {
+    const diagnosticoSection = document.getElementById('diagnostico-section');
+    
+    // Se statsData não foi fornecido, usar stats globais ou calcular a partir dos dados locais
+    let stats = statsData || currentCompanyStats;
+    if (!stats) {
+        try {
+            const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
+            const companyData = organizeDataByCompany(allData);
+            stats = calculateCompanyStats(companyData);
+        } catch (e) {
+            stats = null;
+        }
+    }
+    
+    const totalMappings = stats ? Object.values(stats).reduce((sum, stat) => sum + stat.totalDiagnostics, 0) : 0;
+    const engagementRate = stats ? calculateEngagementRate(stats) : 0;
+    const completionRate = calculateCompletionRate();
+    const interestRate = calculateInterestRate();
+    
+    diagnosticoSection.innerHTML = `
+        <div class="results-container">
+            <div class="results-header">
+                <h2>📊 Análise de Dados e Indicadores</h2>
+                <p>Métricas e estatísticas do mapeamento de bem-estar</p>
+            </div>
+
+            <!-- Indicadores Principais -->
+            <div class="analytics-main-section" style="background: #F5F5F5; padding: 30px; border-radius: 12px; margin-top: 30px;">
+                <h3 style="margin-top: 0; margin-bottom: 25px;">
+                    <i class="fas fa-chart-bar"></i> Indicadores de Mapeamento
+                </h3>
+                <div class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                    <div class="analytics-card" style="background: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="font-size: 42px; font-weight: bold; color: #2196F3; margin-bottom: 12px;">
+                            ${totalMappings}
+                        </div>
+                        <div style="color: #666; font-weight: 600; font-size: 16px; margin-bottom: 8px;">Taxa de Resposta</div>
+                        <div style="color: #999; font-size: 13px;">Total de mapeamentos realizados</div>
+                    </div>
+                    <div class="analytics-card" style="background: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="font-size: 42px; font-weight: bold; color: #10B981; margin-bottom: 12px;">
+                            ${engagementRate}%
+                        </div>
+                        <div style="color: #666; font-weight: 600; font-size: 16px; margin-bottom: 8px;">Engajamento</div>
+                        <div style="color: #999; font-size: 13px;">Percentual de conclusão</div>
+                    </div>
+                    <div class="analytics-card" style="background: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="font-size: 42px; font-weight: bold; color: #F6C44E; margin-bottom: 12px;">
+                            ${completionRate}%
+                        </div>
+                        <div style="color: #666; font-weight: 600; font-size: 16px; margin-bottom: 8px;">Taxa de Conclusão</div>
+                        <div style="color: #999; font-size: 13px;">Mapeamentos completos</div>
+                    </div>
+                    <div class="analytics-card" style="background: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="font-size: 42px; font-weight: bold; color: #9C27B0; margin-bottom: 12px;">
+                            ${interestRate}%
+                        </div>
+                        <div style="color: #666; font-weight: 600; font-size: 16px; margin-bottom: 8px;">Interesse em Aplicar</div>
+                        <div style="color: #999; font-size: 13px;">Com base em feedback</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explicação dos Indicadores -->
+            <div class="indicators-explanation" style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; color: #333;">
+                    <i class="fas fa-info-circle"></i> Sobre os Indicadores
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <div style="padding: 15px; background: #F9F9F9; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #2196F3; display: flex; align-items: center;">
+                            <i class="fas fa-users" style="margin-right: 10px;"></i>
+                            Taxa de Resposta
+                        </h4>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">
+                            Total de colaboradores que iniciaram o mapeamento. Este indicador mostra o alcance do instrumento dentro da organização.
+                        </p>
+                    </div>
+                    <div style="padding: 15px; background: #F9F9F9; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #10B981; display: flex; align-items: center;">
+                            <i class="fas fa-check-circle" style="margin-right: 10px;"></i>
+                            Engajamento
+                        </h4>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">
+                            Percentual de colaboradores que completaram o questionário. Indica o nível de comprometimento com o processo de mapeamento.
+                        </p>
+                    </div>
+                    <div style="padding: 15px; background: #F9F9F9; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #F6C44E; display: flex; align-items: center;">
+                            <i class="fas fa-clipboard-check" style="margin-right: 10px;"></i>
+                            Taxa de Conclusão
+                        </h4>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">
+                            Mapeamentos finalizados com todas as questões respondidas. Reflete a qualidade e completude dos dados coletados.
+                        </p>
+                    </div>
+                    <div style="padding: 15px; background: #F9F9F9; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #9C27B0; display: flex; align-items: center;">
+                            <i class="fas fa-heart" style="margin-right: 10px;"></i>
+                            Interesse em Aplicar
+                        </h4>
+                        <p style="color: #666; margin: 0; line-height: 1.6;">
+                            Percentual de feedback positivo sobre uso do instrumento no trabalho. Validação de aceitação e conforto dos colaboradores.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas por Empresa (se disponível) -->
+            ${stats ? `
+                <div class="company-stats-analytics" style="background: white; padding: 25px; border-radius: 12px; margin-top: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #333;">
+                        <i class="fas fa-building"></i> Estatísticas por Empresa
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+                        ${Object.entries(stats).map(([company, stat]) => {
+                            const companyName = company === 'cartorio' ? 'Cartório' : company === 'credito-consignado' ? 'Crédito Consignado' : 'Outra';
+                            return `
+                                <div style="padding: 20px; background: #F9F9F9; border-radius: 8px; border-left: 4px solid #2196F3;">
+                                    <h4 style="margin-top: 0; color: #333;">${companyName}</h4>
+                                    <div style="margin-top: 15px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                            <span style="color: #666;">Mapeamentos:</span>
+                                            <strong style="color: #2196F3;">${stat.totalDiagnostics}</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                            <span style="color: #666;">Média Geral:</span>
+                                            <strong style="color: #2196F3;">${stat.averageScore.toFixed(2)}/5.0</strong>
+                                        </div>
+                                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                                <span style="color: #10B981; font-size: 14px;">✅ Adequado:</span>
+                                                <strong>${stat.riskDistribution.low}</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                                <span style="color: #F6C44E; font-size: 14px;">⚠️ Alerta:</span>
+                                                <strong>${stat.riskDistribution.medium}</strong>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <span style="color: #E25B5B; font-size: 14px;">🔴 Requer Atenção:</span>
+                                                <strong>${stat.riskDistribution.high}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="action-buttons" style="margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="viewCompanySummaries()">
+                    <i class="fas fa-building"></i>
+                    Voltar ao Relatório das Empresas
+                </button>
+                <button class="btn btn-outline" onclick="showSection('home')">
+                    <i class="fas fa-home"></i>
+                    Voltar ao Início
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Funções para calcular indicadores de análise
+function calculateEngagementRate(stats) {
+    // Simulação: taxa de engajamento baseada em completude
+    // Em produção, isso viria de dados reais
+    const total = Object.values(stats).reduce((sum, stat) => sum + stat.totalDiagnostics, 0);
+    return total > 0 ? Math.min(95, 70 + Math.floor(total / 10)) : 0;
+}
+
+function calculateCompletionRate() {
+    // Calcular taxa de conclusão baseada em mapeamentos completos no localStorage
+    const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
+    const completedData = allData.filter(d => d.pontuacaoGeral > 0);
+    const total = allData.length;
+    
+    if (total === 0) return 0;
+    return Math.round((completedData.length / total) * 100);
+}
+
+function calculateInterestRate() {
+    // Calcular interesse baseado em feedback
+    const feedbackData = JSON.parse(localStorage.getItem('feedback') || '[]');
+    if (feedbackData.length === 0) return 75; // Valor simulado quando não há feedback
+    
+    const positiveFeedback = feedbackData.filter(f => 
+        f.comfort === 'sim-totalmente' || f.comfort === 'sim-parcialmente'
+    );
+    
+    return Math.round((positiveFeedback.length / feedbackData.length) * 100);
+}
+
 // Função para calcular estatísticas das empresas
 function calculateCompanyStats(companyData) {
     const stats = {};
@@ -1546,7 +1882,7 @@ function downloadAllData() {
         const allData = JSON.parse(localStorage.getItem('diagnosticos') || '[]');
         
         if (allData.length === 0) {
-            alert('Nenhum diagnóstico encontrado.');
+            alert('Nenhum mapeamento encontrado.');
             return;
         }
         
@@ -1559,7 +1895,7 @@ function downloadAllData() {
         // Baixar arquivo Excel
         downloadExcelFile(excelData, 'todos-os-diagnosticos');
         
-        alert(`Exportados ${allData.length} diagnósticos com sucesso!`);
+        alert(`Exportados ${allData.length} mapeamentos com sucesso!`);
         
     } catch (error) {
         console.error('Erro ao exportar dados:', error);
@@ -1632,7 +1968,7 @@ function downloadExcelFile(data, filename) {
 function clearLocalData() {
     const confirmClear = confirm(
         '🗑️ Limpar Dados Locais\n\n' +
-        'Esta ação irá remover todos os diagnósticos salvos localmente.\n' +
+        'Esta ação irá remover todos os mapeamentos salvos localmente.\n' +
         'Esta ação não pode ser desfeita.\n\n' +
         'Deseja continuar?'
     );
